@@ -437,6 +437,57 @@ export const INITIAL_DOCUMENTS: CloudDocument[] = [
 
 export const JAVA_SPRING_BOOT_FILES: JavaSourceFile[] = [
   {
+    id: 'java-backend-server',
+    fileName: 'JavaBackendServer.java',
+    packagePath: 'src/main/java/io/plms/backend/JavaBackendServer.java',
+    language: 'java',
+    description: 'Standalone Java 17 HTTP Server implementing PBKDF2-SHA256 authentication, session management, and database synchronization on port 8080.',
+    code: `package io.plms.backend;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.Executors;
+
+/**
+ * Production Java 17 Backend Server for Personal Life Management System.
+ * Handles /api/auth/register, /api/auth/login, /api/auth/session, /api/auth/logout, and /api/auth/settings.
+ */
+public class JavaBackendServer {
+    private static final int DEFAULT_PORT = 8080;
+    private static final Path DB_PATH = Paths.get("data", "plms-db.json");
+
+    public static void main(String[] args) throws IOException {
+        int port = args.length > 0 ? Integer.parseInt(args[0]) : DEFAULT_PORT;
+        HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
+        server.setExecutor(Executors.newCachedThreadPool());
+
+        server.createContext("/api/auth/health", new HealthHandler());
+        server.createContext("/api/auth/register", new RegisterHandler());
+        server.createContext("/api/auth/login", new LoginHandler());
+        server.createContext("/api/auth/session", new SessionHandler());
+        server.createContext("/api/auth/logout", new LogoutHandler());
+        server.createContext("/api/auth/settings", new SettingsHandler());
+
+        server.start();
+        System.out.println("[JavaBackendServer] Running on port " + port);
+    }
+    // ... complete implementation running in java-backend/
+}`,
+  },
+  {
     id: 'java-auth-controller',
     fileName: 'AuthController.java',
     packagePath: 'src/main/java/io/plms/core/web/AuthController.java',

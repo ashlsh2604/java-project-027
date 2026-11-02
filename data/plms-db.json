@@ -1,0 +1,107 @@
+{
+  "users": [
+    {
+      "id": "usr-elena-vance-01",
+      "fullName": "Elena Vance",
+      "email": "elena.vance@plms-enterprise.io",
+      "roleTitle": "Principal Java Systems Architect",
+      "timezone": "America/Los_Angeles (UTC-08:00)",
+      "salt": "plms-enterprise-salt-2026",
+      "passwordHash": "e91e06cfad99c7207846a810f0d6f0ce71e7c6b1e517c72e6e9b67b6be7e9479",
+      "createdAt": "2026-01-14T09:00:00Z",
+      "lastLoginAt": "2026-11-02T14:21:13.652Z"
+    },
+    {
+      "id": "usr-6dcd90d9",
+      "fullName": "Ashish .s",
+      "email": "redxyt2603@gmail.com",
+      "roleTitle": "Senior Software Architect",
+      "timezone": "Asia/Kolkata",
+      "salt": "b7c552352bd882c8307dfe668a22fed3",
+      "passwordHash": "1dce1e684b2e51924e8e5660927587686573a78274df9a3c6bcc7da936494ae5",
+      "createdAt": "2026-11-02T13:59:27.049Z",
+      "lastLoginAt": "2026-11-02T13:59:27.049Z"
+    },
+    {
+      "id": "usr-34ada711",
+      "fullName": "Rahul Sharma",
+      "email": "rahul.sharma@plms-enterprise.in",
+      "roleTitle": "Principal Java Engineer",
+      "timezone": "Asia/Kolkata",
+      "salt": "2ccc27db1b10c7ad6c19a03bcb7fa221",
+      "passwordHash": "bfcb7c4e40ac252fd52b42be77d2b382ac00fadc3540c6a8ab668479aed075bf",
+      "createdAt": "2026-11-02T14:21:20.460Z",
+      "lastLoginAt": "2026-11-02T14:21:20.460Z"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "plms_jwt_4b29445bdb001af026350ba9b90d73e0b31c796150fd6c4b",
+      "userId": "usr-elena-vance-01",
+      "createdAt": "2026-11-02T14:21:13.652Z",
+      "expiresAt": "2026-11-09T14:21:13.653Z"
+    },
+    {
+      "token": "plms_jwt_d11acfd7d49473092803e9558c7ec729a467ee075a18b3fb",
+      "userId": "usr-34ada711",
+      "createdAt": "2026-11-02T14:21:20.460Z",
+      "expiresAt": "2026-11-09T14:21:20.461Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "aud-80461",
+      "userId": "usr-34ada711",
+      "event": "Account Registered in Java Backend (rahul.sharma@plms-enterprise.in)",
+      "ipAddress": "127.0.0.1",
+      "device": "Java 17 OpenJDK · PBKDF2-SHA256",
+      "timestamp": "14:21:20",
+      "status": "Verified"
+    },
+    {
+      "id": "aud-73653",
+      "userId": "usr-elena-vance-01",
+      "event": "Authenticated Session Started in Java Backend (elena.vance@plms-enterprise.io)",
+      "ipAddress": "127.0.0.1",
+      "device": "Java 17 OpenJDK · RS256 Validated",
+      "timestamp": "14:21:13",
+      "status": "Verified"
+    },
+    {
+      "id": "aud-44707",
+      "userId": "usr-6dcd90d9",
+      "event": "User Logged Out & Token Revoked (redxyt2603@gmail.com)",
+      "ipAddress": "127.0.0.1",
+      "device": "Workstation Browser",
+      "timestamp": "14:09:04",
+      "status": "Verified"
+    },
+    {
+      "id": "aud-39142",
+      "userId": "usr-6dcd90d9",
+      "event": "Updated Account Timezone & Settings (Asia/Kolkata)",
+      "ipAddress": "127.0.0.1",
+      "device": "Workstation Settings Menu",
+      "timestamp": "14:08:59",
+      "status": "Verified"
+    },
+    {
+      "id": "aud-67049",
+      "userId": "usr-6dcd90d9",
+      "event": "Account Registered & Persisted (redxyt2603@gmail.com)",
+      "ipAddress": "127.0.0.1",
+      "device": "Workstation Browser · PBKDF2-SHA256",
+      "timestamp": "13:59:27",
+      "status": "Verified"
+    },
+    {
+      "id": "aud-101",
+      "userId": "usr-elena-vance-01",
+      "event": "Database Seeded & Principal Architect Account Provisioned",
+      "ipAddress": "192.0.2.44",
+      "device": "PLMS Persistence Engine",
+      "timestamp": "Today",
+      "status": "Verified"
+    }
+  ]
+}
