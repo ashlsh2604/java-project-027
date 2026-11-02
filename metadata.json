@@ -1,0 +1,6 @@
+{
+  "name": "Personal Life Management System",
+  "description": "Enterprise-grade personal life management system featuring secure authentication, interactive task tracking dashboards, a 14-day habit matrix, goal visualization roadmaps, and cloud-synced document vault with Java Spring Boot architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
