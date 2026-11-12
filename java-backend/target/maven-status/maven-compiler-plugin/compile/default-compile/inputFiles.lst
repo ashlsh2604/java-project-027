@@ -1,4 +1,6 @@
 /app/applet/java-backend/src/main/java/io/plms/backend/JavaBackendServer.java
+/app/applet/java-backend/src/main/java/io/skillbridge/exception/AuthenticationException.java
+/app/applet/java-backend/src/main/java/io/skillbridge/exception/ValidationException.java
 /app/applet/java-backend/src/main/java/io/skillbridge/model/User.java
 /app/applet/java-backend/src/main/java/io/skillbridge/operations/UserOperations.java
 /app/applet/java-backend/src/main/java/io/skillbridge/operations/UserOperationsImpl.java

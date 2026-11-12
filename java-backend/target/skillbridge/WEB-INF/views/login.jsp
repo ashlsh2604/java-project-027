@@ -60,9 +60,9 @@
                   data-dashboard-url="${pageContext.request.contextPath}/dashboard" novalidate>
 
                 <div class="form-group">
-                    <label class="form-label" for="email">Work or Personal Email <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" class="form-input"
-                           placeholder="elena.vance@plms-enterprise.io"
+                    <label class="form-label" for="email">Username or Email <span class="required">*</span></label>
+                    <input type="text" id="email" name="email" class="form-input"
+                           placeholder="e.g. elena.vance or elena.vance@plms-enterprise.io"
                            value="<%= request.getAttribute("enteredEmail") != null ? request.getAttribute("enteredEmail") : "" %>"
                            required autofocus>
                     <div id="emailError" class="field-error"></div>

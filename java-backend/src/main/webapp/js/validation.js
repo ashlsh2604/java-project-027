@@ -1,15 +1,18 @@
 /**
  * SkillBridge Personal Life Management System
  * Phase 3 Client-side JavaScript Validation & JSON Submission Handler
+ * Never exposes plain text passwords in JSON previews or storage.
  */
 
 (function () {
     'use strict';
 
-    // RFC 5322 compliant email regex
+    // RFC compliant email regex
     const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    // Username regex: 3-30 chars, alphanumeric with . _ -
+    const USERNAME_REGEX = /^[a-zA-Z0-9._-]{3,30}$/;
 
-    // Phase 2 & 3 Password Policy: Minimum 8 chars, 1 uppercase, 1 lowercase, 1 digit
+    // Password Policy: Minimum 8 chars, 1 uppercase, 1 lowercase, 1 digit
     const PASSWORD_MIN_LEN = 8;
     const HAS_UPPERCASE = /[A-Z]/;
     const HAS_LOWERCASE = /[a-z]/;
@@ -27,16 +30,16 @@
         const form = document.getElementById('loginForm');
         if (!form) return;
 
-        const emailInput = document.getElementById('email');
+        const emailOrUserInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const jsonToggle = document.getElementById('jsonModeToggle');
         const jsonPreview = document.getElementById('jsonPreview');
         const submitBtn = document.getElementById('submitBtn');
         const clientErrorAlert = document.getElementById('clientErrorAlert');
 
-        if (emailInput) {
-            emailInput.addEventListener('input', () => {
-                validateEmailField(emailInput);
+        if (emailOrUserInput) {
+            emailOrUserInput.addEventListener('input', () => {
+                validateIdentifierField(emailOrUserInput);
             });
         }
 
@@ -49,33 +52,43 @@
         }
 
         form.addEventListener('submit', async (e) => {
-            const isEmailValid = validateEmailField(emailInput);
+            const isIdentifierValid = validateIdentifierField(emailOrUserInput);
             const isPasswordValid = passwordInput.value.trim().length > 0;
 
             if (!isPasswordValid) {
                 setFieldStatus(passwordInput, false, 'Password is required.');
             }
 
-            if (!isEmailValid || !isPasswordValid) {
+            if (!isIdentifierValid || !isPasswordValid) {
                 e.preventDefault();
                 showClientError(clientErrorAlert, 'Please correct the validation errors in the form.');
                 return;
             }
 
-            // If JSON mode is enabled, handle via AJAX fetch
+            // Phase 3: JSON mode handling via fetch API
             if (jsonToggle && jsonToggle.checked) {
                 e.preventDefault();
                 submitBtn.disabled = true;
                 submitBtn.innerText = 'Authenticating via JSON...';
 
+                const rawVal = emailOrUserInput.value.trim();
+                const isEmail = rawVal.includes('@');
                 const payload = {
-                    email: emailInput.value.trim(),
+                    username: !isEmail ? rawVal : '',
+                    email: isEmail ? rawVal : '',
                     password: passwordInput.value
+                };
+
+                // Safe display copy: NEVER expose plain passwords in JSON preview
+                const safeDisplayPayload = {
+                    username: payload.username || undefined,
+                    email: payload.email || undefined,
+                    password: '•••••••• (Masked for Security)'
                 };
 
                 if (jsonPreview) {
                     jsonPreview.style.display = 'block';
-                    jsonPreview.innerText = 'Sending Request Payload:\n' + JSON.stringify(payload, null, 2);
+                    jsonPreview.innerText = 'Sending Request Payload:\n' + JSON.stringify(safeDisplayPayload, null, 2);
                 }
 
                 try {
@@ -92,7 +105,7 @@
 
                     if (response.ok && data.success) {
                         if (jsonPreview) {
-                            jsonPreview.innerText += '\n\nResponse (200 OK):\n' + JSON.stringify(data, null, 2);
+                            jsonPreview.innerText += '\n\nResponse (200 OK - Safe User Data Structure):\n' + JSON.stringify(data, null, 2);
                         }
                         setTimeout(() => {
                             window.location.href = form.getAttribute('data-dashboard-url') || '/dashboard';
@@ -122,6 +135,7 @@
         if (!form) return;
 
         const nameInput = document.getElementById('fullName');
+        const usernameInput = document.getElementById('username');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
         const confirmInput = document.getElementById('confirmPassword');
@@ -140,6 +154,12 @@
         if (nameInput) {
             nameInput.addEventListener('input', () => {
                 validateNameField(nameInput);
+            });
+        }
+
+        if (usernameInput) {
+            usernameInput.addEventListener('input', () => {
+                validateUsernameField(usernameInput);
             });
         }
 
@@ -168,11 +188,12 @@
 
         form.addEventListener('submit', async (e) => {
             const isNameValid = validateNameField(nameInput);
+            const isUserValid = validateUsernameField(usernameInput);
             const isEmailValid = validateEmailField(emailInput);
             const isPasswordValid = validatePasswordField(passwordInput);
             const isConfirmValid = validateConfirmPasswordField(passwordInput, confirmInput);
 
-            if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmValid) {
+            if (!isNameValid || !isUserValid || !isEmailValid || !isPasswordValid || !isConfirmValid) {
                 e.preventDefault();
                 showClientError(clientErrorAlert, 'Please resolve all validation errors highlighted above.');
                 return;
@@ -186,6 +207,7 @@
 
                 const payload = {
                     fullName: nameInput.value.trim(),
+                    username: usernameInput ? usernameInput.value.trim() : '',
                     email: emailInput.value.trim(),
                     password: passwordInput.value,
                     confirmPassword: confirmInput.value,
@@ -193,9 +215,18 @@
                     roleTitle: 'Full Stack Engineer'
                 };
 
+                // Safe display copy: NEVER expose plain passwords in JSON preview
+                const safeDisplayPayload = {
+                    fullName: payload.fullName,
+                    username: payload.username,
+                    email: payload.email,
+                    password: '•••••••• (Masked for Security)',
+                    timezone: payload.timezone
+                };
+
                 if (jsonPreview) {
                     jsonPreview.style.display = 'block';
-                    jsonPreview.innerText = 'Sending Request Payload:\n' + JSON.stringify(payload, null, 2);
+                    jsonPreview.innerText = 'Sending Request Payload:\n' + JSON.stringify(safeDisplayPayload, null, 2);
                 }
 
                 try {
@@ -212,7 +243,7 @@
 
                     if (response.ok && data.success) {
                         if (jsonPreview) {
-                            jsonPreview.innerText += '\n\nResponse (201 Created):\n' + JSON.stringify(data, null, 2);
+                            jsonPreview.innerText += '\n\nResponse (201 Created - Safe User Data Structure):\n' + JSON.stringify(data, null, 2);
                         }
                         setTimeout(() => {
                             window.location.href = form.getAttribute('data-dashboard-url') || '/dashboard';
@@ -240,6 +271,43 @@
         if (val.length < 2) {
             setFieldStatus(input, false, 'Full Name must be at least 2 characters long.');
             return false;
+        }
+        setFieldStatus(input, true);
+        return true;
+    }
+
+    function validateUsernameField(input) {
+        if (!input) return true;
+        const val = input.value.trim();
+        if (val.length === 0) {
+            setFieldStatus(input, false, 'Username is required.');
+            return false;
+        }
+        if (!USERNAME_REGEX.test(val)) {
+            setFieldStatus(input, false, 'Username must be 3-30 characters (letters, numbers, dot, underscore, or hyphen).');
+            return false;
+        }
+        setFieldStatus(input, true);
+        return true;
+    }
+
+    function validateIdentifierField(input) {
+        if (!input) return true;
+        const val = input.value.trim();
+        if (val.length === 0) {
+            setFieldStatus(input, false, 'Username or email address is required.');
+            return false;
+        }
+        if (val.includes('@')) {
+            if (!EMAIL_REGEX.test(val)) {
+                setFieldStatus(input, false, 'Please enter a valid email address.');
+                return false;
+            }
+        } else {
+            if (!USERNAME_REGEX.test(val)) {
+                setFieldStatus(input, false, 'Username must be 3-30 characters.');
+                return false;
+            }
         }
         setFieldStatus(input, true);
         return true;
@@ -327,8 +395,7 @@
         } else if (score >= 3) {
             seg1.style.backgroundColor = '#10b981';
             seg2.style.backgroundColor = '#10b981';
-            seg3.style.backgroundColor = '#10b981';
-            label.innerText = 'Strong & Syllabus Compliant';
+            label.innerText = 'Strong & Compliant';
             label.style.color = '#10b981';
         } else {
             label.innerText = 'Password policy: 8+ chars, upper, lower, number';

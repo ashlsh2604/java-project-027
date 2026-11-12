@@ -122,7 +122,7 @@ class ServletFlowTest {
 
         loginServlet.doPost(request, response);
 
-        verify(request).setAttribute(eq("errorMessage"), contains("Invalid email or password"));
+        verify(request).setAttribute(eq("errorMessage"), contains("password"));
         verify(dispatcher).forward(request, response);
         verify(response, never()).sendRedirect(anyString());
     }

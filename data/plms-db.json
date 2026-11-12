@@ -32,6 +32,17 @@
       "passwordHash": "bfcb7c4e40ac252fd52b42be77d2b382ac00fadc3540c6a8ab668479aed075bf",
       "createdAt": "2026-11-02T14:21:20.460Z",
       "lastLoginAt": "2026-11-02T14:21:20.460Z"
+    },
+    {
+      "id": "usr-aefb678d",
+      "fullName": "Dev Test User",
+      "email": "dev.test@skillbridge.io",
+      "roleTitle": "Executive Member",
+      "timezone": "Asia/Kolkata",
+      "salt": "b2199bf8a86150829d8685d9f19f32f8",
+      "passwordHash": "b7b931e1961a4d4733a05f91fcaa9f8a419abd0b564515b0dcdb1147971fa07c",
+      "createdAt": "2026-11-02T17:28:22.407Z",
+      "lastLoginAt": "2026-11-02T17:28:29.613Z"
     }
   ],
   "sessions": [
@@ -46,9 +57,39 @@
       "userId": "usr-34ada711",
       "createdAt": "2026-11-02T14:21:20.460Z",
       "expiresAt": "2026-11-09T14:21:20.461Z"
+    },
+    {
+      "token": "plms_jwt_f8dc6eb7dbaed6337410a79719e2412f73c5550a1c7dc849",
+      "userId": "usr-aefb678d",
+      "createdAt": "2026-11-02T17:28:22.407Z",
+      "expiresAt": "2026-11-09T17:28:22.407Z"
+    },
+    {
+      "token": "plms_jwt_56bbbb1ba0ba046092e2ff9eb9894621523e082c0b73fc1c",
+      "userId": "usr-aefb678d",
+      "createdAt": "2026-11-02T17:28:29.613Z",
+      "expiresAt": "2026-11-09T17:28:29.613Z"
     }
   ],
   "auditLogs": [
+    {
+      "id": "aud-09613",
+      "userId": "usr-aefb678d",
+      "event": "Authenticated Session Started in Java Backend (dev.test@skillbridge.io)",
+      "ipAddress": "127.0.0.1",
+      "device": "Java 17 OpenJDK · RS256 Validated",
+      "timestamp": "17:28:29",
+      "status": "Verified"
+    },
+    {
+      "id": "aud-02407",
+      "userId": "usr-aefb678d",
+      "event": "Account Registered in Java Backend (dev.test@skillbridge.io)",
+      "ipAddress": "127.0.0.1",
+      "device": "Java 17 OpenJDK · PBKDF2-SHA256",
+      "timestamp": "17:28:22",
+      "status": "Verified"
+    },
     {
       "id": "aud-80461",
       "userId": "usr-34ada711",

@@ -58,6 +58,15 @@
                 </div>
 
                 <div class="form-group">
+                    <label class="form-label" for="username">Username <span class="required">*</span></label>
+                    <input type="text" id="username" name="username" class="form-input"
+                           placeholder="e.g. alex.morgan"
+                           value="<%= request.getAttribute("enteredUsername") != null ? request.getAttribute("enteredUsername") : "" %>"
+                           required>
+                    <div id="usernameError" class="field-error"></div>
+                </div>
+
+                <div class="form-group">
                     <label class="form-label" for="email">Email Address <span class="required">*</span></label>
                     <input type="email" id="email" name="email" class="form-input"
                            placeholder="alex.morgan@example.com"

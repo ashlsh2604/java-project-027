@@ -79,7 +79,7 @@ public class LoginServlet extends HttpServlet {
         String contentType = request.getContentType();
         boolean isJson = contentType != null && contentType.toLowerCase().contains("application/json");
 
-        String email = "";
+        String identifier = "";
         String password = "";
 
         if (isJson) {
@@ -91,27 +91,33 @@ public class LoginServlet extends HttpServlet {
                 }
             }
             String jsonStr = sb.toString();
-            email = extractJsonField(jsonStr, "email");
+            identifier = extractJsonField(jsonStr, "username");
+            if (identifier.isBlank()) {
+                identifier = extractJsonField(jsonStr, "email");
+            }
             password = extractJsonField(jsonStr, "password");
         } else {
-            email = request.getParameter("email");
+            identifier = request.getParameter("username");
+            if (identifier == null || identifier.isBlank()) {
+                identifier = request.getParameter("email");
+            }
             password = request.getParameter("password");
         }
 
-        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+        if (identifier == null || identifier.isBlank() || password == null || password.isBlank()) {
             if (isJson) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 response.setContentType("application/json;charset=UTF-8");
-                response.getWriter().write("{\"error\":\"Both email and password are required.\"}");
+                response.getWriter().write("{\"error\":\"Both username/email and password are required.\"}");
                 return;
             }
-            request.setAttribute("errorMessage", "Please provide both email address and password.");
-            request.setAttribute("enteredEmail", email);
+            request.setAttribute("errorMessage", "Please provide both username/email and password.");
+            request.setAttribute("enteredEmail", identifier);
             request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
             return;
         }
 
-        User authenticated = userOperations.authenticate(email.trim(), password);
+        User authenticated = userOperations.authenticate(identifier.trim(), password);
 
         if (authenticated == null) {
             if (isJson) {
@@ -120,8 +126,8 @@ public class LoginServlet extends HttpServlet {
                 response.getWriter().write("{\"error\":\"Invalid credentials. No matching account found.\"}");
                 return;
             }
-            request.setAttribute("errorMessage", "Invalid email or password. Please try again.");
-            request.setAttribute("enteredEmail", email.trim());
+            request.setAttribute("errorMessage", "Invalid username/email or password. Please try again.");
+            request.setAttribute("enteredEmail", identifier.trim());
             request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
             return;
         }
@@ -131,6 +137,7 @@ public class LoginServlet extends HttpServlet {
         session.setAttribute("user", authenticated);
         session.setAttribute("userId", authenticated.getId());
         session.setAttribute("userEmail", authenticated.getEmail());
+        session.setAttribute("username", authenticated.getUsername());
         session.setAttribute("userName", authenticated.getFullName());
         session.setAttribute("userRole", authenticated.getRoleTitle());
         session.setAttribute("userTimezone", authenticated.getTimezone());
@@ -139,7 +146,8 @@ public class LoginServlet extends HttpServlet {
         if (isJson) {
             response.setStatus(HttpServletResponse.SC_OK);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":true,\"userId\":\"" + authenticated.getId() + "\",\"email\":\"" + authenticated.getEmail() + "\"}");
+            // Never expose passwords or password hashes in JSON response
+            response.getWriter().write("{\"success\":true,\"userId\":\"" + authenticated.getId() + "\",\"username\":\"" + escape(authenticated.getUsername()) + "\",\"email\":\"" + escape(authenticated.getEmail()) + "\"}");
             return;
         }
 
@@ -153,5 +161,10 @@ public class LoginServlet extends HttpServlet {
             return matcher.group(1);
         }
         return "";
+    }
+
+    private String escape(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

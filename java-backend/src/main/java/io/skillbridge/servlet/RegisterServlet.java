@@ -65,6 +65,7 @@ public class RegisterServlet extends HttpServlet {
         boolean isJson = contentType != null && contentType.toLowerCase().contains("application/json");
 
         String fullName = "";
+        String username = "";
         String email = "";
         String password = "";
         String confirmPassword = "";
@@ -84,6 +85,7 @@ public class RegisterServlet extends HttpServlet {
             if (fullName.isBlank()) {
                 fullName = extractJsonField(jsonStr, "name");
             }
+            username = extractJsonField(jsonStr, "username");
             email = extractJsonField(jsonStr, "email");
             password = extractJsonField(jsonStr, "password");
             confirmPassword = extractJsonField(jsonStr, "confirmPassword");
@@ -100,6 +102,7 @@ public class RegisterServlet extends HttpServlet {
             if (fullName == null || fullName.isBlank()) {
                 fullName = request.getParameter("name");
             }
+            username = request.getParameter("username");
             email = request.getParameter("email");
             password = request.getParameter("password");
             confirmPassword = request.getParameter("confirmPassword");
@@ -114,6 +117,7 @@ public class RegisterServlet extends HttpServlet {
         }
 
         fullName = fullName != null ? fullName.trim() : "";
+        username = username != null ? username.trim() : "";
         email = email != null ? email.trim() : "";
         password = password != null ? password : "";
         confirmPassword = confirmPassword != null ? confirmPassword : "";
@@ -130,6 +134,14 @@ public class RegisterServlet extends HttpServlet {
         if (!userOperations.validateEmailFormat(email)) {
             sendError(request, response, isJson, HttpServletResponse.SC_BAD_REQUEST,
                     "Please enter a valid email address.",
+                    fullName, email, timezone);
+            return;
+        }
+
+        // Username format check if supplied
+        if (!username.isEmpty() && !User.isValidUsername(username)) {
+            sendError(request, response, isJson, HttpServletResponse.SC_BAD_REQUEST,
+                    "Username must be between 3 and 30 characters (letters, numbers, dot, underscore, or hyphen).",
                     fullName, email, timezone);
             return;
         }
@@ -158,11 +170,19 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
+        if (!username.isEmpty() && userOperations.isUsernameRegistered(username)) {
+            sendError(request, response, isJson, HttpServletResponse.SC_CONFLICT,
+                    "Username '" + username + "' is already taken. Please choose another username.",
+                    fullName, email, timezone);
+            return;
+        }
+
         // Construct and register new user
         String newId = "usr-" + UUID.randomUUID().toString().substring(0, 8);
         User newUser = new User();
         newUser.setId(newId);
         newUser.setFullName(fullName);
+        newUser.setUsername(!username.isEmpty() ? username : (email.contains("@") ? email.substring(0, email.indexOf('@')) : email));
         newUser.setEmail(email);
         newUser.setTimezone(timezone);
         newUser.setRoleTitle(roleTitle);
@@ -188,6 +208,7 @@ public class RegisterServlet extends HttpServlet {
         session.setAttribute("user", newUser);
         session.setAttribute("userId", newUser.getId());
         session.setAttribute("userEmail", newUser.getEmail());
+        session.setAttribute("username", newUser.getUsername());
         session.setAttribute("userName", newUser.getFullName());
         session.setAttribute("userRole", newUser.getRoleTitle());
         session.setAttribute("userTimezone", newUser.getTimezone());
@@ -196,7 +217,8 @@ public class RegisterServlet extends HttpServlet {
         if (isJson) {
             response.setStatus(HttpServletResponse.SC_CREATED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"success\":true,\"userId\":\"" + newUser.getId() + "\",\"email\":\"" + newUser.getEmail() + "\",\"message\":\"Registration successful\"}");
+            // Safe JSON user-data structure: never expose passwords or password hashes
+            response.getWriter().write("{\"success\":true,\"user\":{\"id\":\"" + escape(newUser.getId()) + "\",\"username\":\"" + escape(newUser.getUsername()) + "\",\"email\":\"" + escape(newUser.getEmail()) + "\",\"fullName\":\"" + escape(newUser.getFullName()) + "\",\"timezone\":\"" + escape(newUser.getTimezone()) + "\"},\"message\":\"Registration successful\"}");
             return;
         }
 

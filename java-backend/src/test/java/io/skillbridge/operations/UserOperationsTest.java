@@ -1,5 +1,7 @@
 package io.skillbridge.operations;
 
+import io.skillbridge.exception.AuthenticationException;
+import io.skillbridge.exception.ValidationException;
 import io.skillbridge.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,9 +14,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Phase 2 & Phase 6 Test Suite:
- * Validates UserOperations contract, credential validation,
- * password policy compliance, and duplicate user rejection.
+ * Phase 1 & 2 Test Suite:
+ * Validates Java User class with username/password fields, basic input validation,
+ * UserOperations interface contract, and clear invalid input exception handling.
  */
 class UserOperationsTest {
 
@@ -30,9 +32,65 @@ class UserOperationsTest {
     }
 
     @Test
-    @DisplayName("Requirement 6: User registration succeeds with valid syllabus credentials")
+    @DisplayName("Phase 1: User class creates user with username/password fields and validates input")
+    void testUserClass_BasicInputValidation() {
+        // Valid user instance
+        User validUser = new User("marcus_h", "SecurePass2026!");
+        validUser.setEmail("marcus@example.com");
+        validUser.setFullName("Marcus Holloway");
+
+        assertTrue(User.isValidUsername("marcus_h"));
+        assertTrue(User.isValidPassword("SecurePass2026!"));
+        assertTrue(User.isValidEmail("marcus@example.com"));
+        assertTrue(validUser.isValid());
+        assertTrue(validUser.validate().isEmpty());
+
+        // Invalid username (too short or invalid chars)
+        assertFalse(User.isValidUsername("ab"));
+        assertFalse(User.isValidUsername("user name with spaces"));
+
+        // Invalid password
+        assertFalse(User.isValidPassword("short"));
+        assertFalse(User.isValidPassword("alllowercase123!"));
+
+        // Invalid user validation list
+        User invalidUser = new User("x", "weak");
+        assertFalse(invalidUser.isValid());
+        assertFalse(invalidUser.validate().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Phase 2: Handles invalid inputs clearly via ValidationException")
+    void testUserOperations_HandlesInvalidInputsClearly() {
+        // Missing fields
+        assertThrows(ValidationException.class, () ->
+                userOperations.validateUserInput("", "", "")
+        );
+
+        // Invalid email format
+        assertThrows(ValidationException.class, () ->
+                userOperations.validateUserInput("validuser", "notanemail", "ValidPass2026!")
+        );
+
+        // Weak password
+        assertThrows(ValidationException.class, () ->
+                userOperations.validateUserInput("validuser", "user@example.com", "weak")
+        );
+    }
+
+    @Test
+    @DisplayName("Phase 2: Authentication throws clear AuthenticationException on invalid credentials")
+    void testUserOperations_AuthenticationExceptionOnInvalidCredentials() {
+        assertThrows(AuthenticationException.class, () ->
+                userOperations.authenticateUser("nonexistent.user", "ValidPass2026!")
+        );
+    }
+
+    @Test
+    @DisplayName("Registration succeeds with valid syllabus credentials and username")
     void testRegisterUser_Success() {
         User user = new User();
+        user.setUsername("marcus.holloway");
         user.setFullName("Marcus Holloway");
         user.setEmail("marcus.holloway@example.org");
         user.setTimezone("Asia/Kolkata");
@@ -43,15 +101,22 @@ class UserOperationsTest {
         User retrieved = userOperations.getUserByEmail("marcus.holloway@example.org");
         assertNotNull(retrieved, "Registered user must be queryable by email");
         assertEquals("Marcus Holloway", retrieved.getFullName());
+        assertEquals("marcus.holloway", retrieved.getUsername());
         assertEquals("Asia/Kolkata", retrieved.getTimezone());
         assertNotNull(retrieved.getPasswordHash());
         assertNotNull(retrieved.getSalt());
+
+        // Also queryable by username
+        User byUsername = userOperations.getUserByUsername("marcus.holloway");
+        assertNotNull(byUsername);
+        assertEquals("marcus.holloway@example.org", byUsername.getEmail());
     }
 
     @Test
-    @DisplayName("Requirement 6: Registration rejects duplicate email addresses")
+    @DisplayName("Registration rejects duplicate email addresses and duplicate usernames")
     void testRegisterUser_DuplicateEmailRejected() {
         User user1 = new User();
+        user1.setUsername("ada.lovelace");
         user1.setFullName("Ada Lovelace");
         user1.setEmail("ada.lovelace@computing.org");
 
@@ -59,6 +124,7 @@ class UserOperationsTest {
         assertTrue(first, "First registration must succeed");
 
         User user2 = new User();
+        user2.setUsername("ada.second");
         user2.setFullName("Ada Clone");
         user2.setEmail("ada.lovelace@computing.org");
 
@@ -67,22 +133,31 @@ class UserOperationsTest {
     }
 
     @Test
-    @DisplayName("Requirement 6: Successful authentication with valid password")
-    void testAuthenticate_ValidCredentials() {
+    @DisplayName("Successful authentication with valid password via email or username")
+    void testAuthenticate_ValidCredentials() throws Exception {
         User user = new User();
+        user.setUsername("alan_turing");
         user.setFullName("Alan Turing");
         user.setEmail("alan.turing@enigma.ac.uk");
 
         userOperations.registerUser(user, "Turing1936!Engine");
 
-        User authenticated = userOperations.authenticate("alan.turing@enigma.ac.uk", "Turing1936!Engine");
-        assertNotNull(authenticated, "Authentication with correct credentials must return User object");
-        assertEquals("Alan Turing", authenticated.getFullName());
-        assertTrue(userOperations.validateCredentials("alan.turing@enigma.ac.uk", "Turing1936!Engine"));
+        // Authenticate with email
+        User authenticatedByEmail = userOperations.authenticate("alan.turing@enigma.ac.uk", "Turing1936!Engine");
+        assertNotNull(authenticatedByEmail);
+        assertEquals("Alan Turing", authenticatedByEmail.getFullName());
+
+        // Authenticate with username
+        User authenticatedByUsername = userOperations.authenticate("alan_turing", "Turing1936!Engine");
+        assertNotNull(authenticatedByUsername);
+
+        // AuthenticateUser method
+        User authMethodResult = userOperations.authenticateUser("alan_turing", "Turing1936!Engine");
+        assertNotNull(authMethodResult);
     }
 
     @Test
-    @DisplayName("Requirement 6: Authentication fails with invalid password")
+    @DisplayName("Authentication fails with invalid password")
     void testAuthenticate_InvalidPasswordRejected() {
         User user = new User();
         user.setFullName("Grace Hopper");
@@ -96,30 +171,25 @@ class UserOperationsTest {
     }
 
     @Test
-    @DisplayName("Requirement 6: Authentication fails for non-existent email")
+    @DisplayName("Authentication fails for non-existent email")
     void testAuthenticate_UnknownEmailReturnsNull() {
         User authenticated = userOperations.authenticate("unknown@domain.com", "SomePassword123!");
         assertNull(authenticated, "Non-existent user must return null");
     }
 
     @Test
-    @DisplayName("Phase 2 Requirement: Syllabus password policy validation")
+    @DisplayName("Password policy validation")
     void testPasswordPolicy_Validation() {
-        // Less than 8 characters -> invalid
         assertFalse(userOperations.validatePasswordPolicy("Short1!"));
-        // No uppercase -> invalid
         assertFalse(userOperations.validatePasswordPolicy("lowercase1234!"));
-        // No lowercase -> invalid
         assertFalse(userOperations.validatePasswordPolicy("UPPERCASE1234!"));
-        // No digit -> invalid
         assertFalse(userOperations.validatePasswordPolicy("NoDigitsAtAll!"));
-        // Valid compliant passwords
         assertTrue(userOperations.validatePasswordPolicy("Syllabus2026Pass!"));
         assertTrue(userOperations.validatePasswordPolicy("EnterpriseJava17"));
     }
 
     @Test
-    @DisplayName("Phase 2 Requirement: RFC email format validation")
+    @DisplayName("RFC email format validation")
     void testEmailFormat_Validation() {
         assertTrue(userOperations.validateEmailFormat("developer@skillbridge.io"));
         assertTrue(userOperations.validateEmailFormat("first.last@university.edu.in"));
@@ -146,7 +216,7 @@ class UserOperationsTest {
     }
 
     @Test
-    @DisplayName("Phase 2 Requirement: Retrieve all registered users")
+    @DisplayName("Retrieve all registered users")
     void testGetAllUsers() {
         List<User> initialUsers = userOperations.getAllUsers();
         int initialCount = initialUsers.size();

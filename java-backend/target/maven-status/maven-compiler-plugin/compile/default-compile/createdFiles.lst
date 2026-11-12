@@ -1,8 +1,10 @@
 io/skillbridge/servlet/AppContextListener.class
+io/skillbridge/exception/AuthenticationException.class
 io/skillbridge/operations/UserOperations.class
 io/plms/backend/JavaBackendServer$SystemStatusHandler.class
 io/skillbridge/operations/UserOperationsImpl.class
 io/plms/backend/JavaBackendServer$RegisterHandler.class
+io/skillbridge/exception/ValidationException.class
 io/skillbridge/servlet/LoginServlet.class
 io/plms/backend/JavaBackendServer.class
 io/skillbridge/servlet/RegisterServlet.class

@@ -92,11 +92,12 @@ export interface CloudDocument {
 
 export interface UserAccount {
   id: string;
+  username?: string;
   fullName: string;
   email: string;
   roleTitle: string;
   timezone: string;
-  passwordHash: string;
+  passwordHash?: string;
   createdAt: string;
   lastLoginAt: string;
 }

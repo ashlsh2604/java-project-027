@@ -1,5 +1,7 @@
 package io.skillbridge.operations;
 
+import io.skillbridge.exception.AuthenticationException;
+import io.skillbridge.exception.ValidationException;
 import io.skillbridge.model.User;
 import io.skillbridge.util.PasswordUtil;
 
@@ -17,6 +19,7 @@ import java.util.regex.Pattern;
 /**
  * Phase 2 Implementation: Concrete implementation of UserOperations.
  * Provides thread-safe, secure user operations and persists users into data/plms-db.json.
+ * Handles invalid inputs clearly through ValidationException and AuthenticationException.
  */
 public class UserOperationsImpl implements UserOperations {
 
@@ -53,26 +56,27 @@ public class UserOperationsImpl implements UserOperations {
     }
 
     @Override
-    public synchronized boolean registerUser(User user, String rawPassword) {
+    public synchronized boolean registerUser(User user, String rawPassword) throws ValidationException {
         if (user == null || rawPassword == null) {
-            throw new IllegalArgumentException("User object and raw password cannot be null");
+            throw new ValidationException("User object and password cannot be null.");
         }
 
+        String username = user.getUsername();
         String email = user.getEmail();
-        if (!validateEmailFormat(email)) {
-            throw new IllegalArgumentException("Invalid email format: " + email);
+
+        // Use clear validation handling
+        validateUserInput(username, email, rawPassword);
+
+        if (email != null && isEmailRegistered(email)) {
+            return false;
         }
 
-        if (isEmailRegistered(email)) {
+        if (username != null && isUsernameRegistered(username)) {
             return false;
         }
 
         if (user.getFullName() == null || user.getFullName().trim().length() < 2) {
-            throw new IllegalArgumentException("Full name must be at least 2 characters long");
-        }
-
-        if (!validatePasswordPolicy(rawPassword)) {
-            throw new IllegalArgumentException("Password must be at least 8 characters long and contain uppercase, lowercase, and numeric characters");
+            throw new ValidationException("Full name must be at least 2 characters long.");
         }
 
         if (user.getId() == null || user.getId().isBlank()) {
@@ -92,17 +96,26 @@ public class UserOperationsImpl implements UserOperations {
         user.setCreatedAt(now);
         user.setLastLoginAt(now);
 
-        userCache.put(user.getEmail().toLowerCase(), user);
+        if (email != null) {
+            userCache.put(email.toLowerCase(), user);
+        }
+        if (username != null && !username.equalsIgnoreCase(email)) {
+            userCache.put(username.toLowerCase(), user);
+        }
+
         saveDatabase();
         return true;
     }
 
     @Override
-    public synchronized User authenticate(String email, String rawPassword) {
-        if (email == null || rawPassword == null) {
+    public synchronized User authenticate(String identifier, String rawPassword) {
+        if (identifier == null || rawPassword == null || identifier.isBlank() || rawPassword.isBlank()) {
             return null;
         }
-        User user = getUserByEmail(email);
+        User user = getUserByEmail(identifier);
+        if (user == null) {
+            user = getUserByUsername(identifier);
+        }
         if (user == null) {
             return null;
         }
@@ -116,20 +129,72 @@ public class UserOperationsImpl implements UserOperations {
     }
 
     @Override
-    public boolean validateCredentials(String email, String rawPassword) {
-        return authenticate(email, rawPassword) != null;
+    public User authenticateUser(String identifier, String rawPassword) throws AuthenticationException, ValidationException {
+        if (identifier == null || identifier.isBlank()) {
+            throw new ValidationException("Username or email address is required.");
+        }
+        if (rawPassword == null || rawPassword.isBlank()) {
+            throw new ValidationException("Password is required.");
+        }
+
+        User user = authenticate(identifier, rawPassword);
+        if (user == null) {
+            throw new AuthenticationException("Invalid username/email or password. Please check your credentials.");
+        }
+        return user;
+    }
+
+    @Override
+    public boolean validateCredentials(String identifier, String rawPassword) {
+        return authenticate(identifier, rawPassword) != null;
     }
 
     @Override
     public boolean isEmailRegistered(String email) {
         if (email == null) return false;
-        return userCache.containsKey(email.trim().toLowerCase());
+        String key = email.trim().toLowerCase();
+        for (User u : userCache.values()) {
+            if (key.equalsIgnoreCase(u.getEmail())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isUsernameRegistered(String username) {
+        if (username == null) return false;
+        String key = username.trim().toLowerCase();
+        for (User u : userCache.values()) {
+            if (key.equalsIgnoreCase(u.getUsername()) || key.equalsIgnoreCase(u.getEmail())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
     public User getUserByEmail(String email) {
         if (email == null) return null;
-        return userCache.get(email.trim().toLowerCase());
+        String target = email.trim().toLowerCase();
+        for (User u : userCache.values()) {
+            if (target.equalsIgnoreCase(u.getEmail())) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public User getUserByUsername(String username) {
+        if (username == null) return null;
+        String target = username.trim().toLowerCase();
+        for (User u : userCache.values()) {
+            if (target.equalsIgnoreCase(u.getUsername()) || target.equalsIgnoreCase(u.getEmail())) {
+                return u;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -156,17 +221,43 @@ public class UserOperationsImpl implements UserOperations {
 
     @Override
     public boolean validatePasswordPolicy(String password) {
-        return PasswordUtil.isStrongPassword(password);
+        return User.isValidPassword(password);
     }
 
     @Override
     public boolean validateEmailFormat(String email) {
-        return PasswordUtil.isValidEmail(email);
+        return User.isValidEmail(email);
+    }
+
+    @Override
+    public boolean validateUsernameFormat(String username) {
+        return User.isValidUsername(username);
+    }
+
+    @Override
+    public void validateUserInput(String username, String email, String rawPassword) throws ValidationException {
+        List<String> errors = new ArrayList<>();
+        if ((username == null || username.isBlank()) && (email == null || email.isBlank())) {
+            errors.add("Username or email is required.");
+        }
+        if (email != null && !email.isBlank() && !validateEmailFormat(email)) {
+            errors.add("Invalid email format: " + email);
+        }
+        if (username != null && !username.isBlank() && !validateUsernameFormat(username) && !validateEmailFormat(username)) {
+            errors.add("Username must be 3-30 alphanumeric characters.");
+        }
+        if (rawPassword == null || !validatePasswordPolicy(rawPassword)) {
+            errors.add("Password must be at least 8 characters long and contain uppercase, lowercase, and numeric characters.");
+        }
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
     }
 
     @Override
     public List<User> getAllUsers() {
-        return Collections.unmodifiableList(new ArrayList<>(userCache.values()));
+        Set<User> distinct = new HashSet<>(userCache.values());
+        return Collections.unmodifiableList(new ArrayList<>(distinct));
     }
 
     // ==========================================
@@ -195,6 +286,7 @@ public class UserOperationsImpl implements UserOperations {
         String hash = PasswordUtil.hashPassword("Architect2026!", salt);
         User elena = new User(
                 "usr-elena-vance-01",
+                "elena.vance",
                 "Elena Vance",
                 "elena.vance@plms-enterprise.io",
                 hash,
@@ -232,18 +324,25 @@ public class UserOperationsImpl implements UserOperations {
             String objText = objMatcher.group(1);
             Map<String, String> fields = extractJsonFields(objText);
             String email = fields.get("email");
-            if (email != null && !email.isBlank()) {
+            String username = fields.get("username");
+            if ((email != null && !email.isBlank()) || (username != null && !username.isBlank())) {
                 User u = new User();
                 u.setId(fields.get("id"));
+                u.setUsername(username != null ? username : (email != null ? email.substring(0, email.indexOf('@')) : null));
                 u.setFullName(fields.get("fullName"));
-                u.setEmail(email.trim().toLowerCase());
+                u.setEmail(email != null ? email.trim().toLowerCase() : null);
                 u.setPasswordHash(fields.get("passwordHash"));
                 u.setSalt(fields.get("salt"));
                 u.setRoleTitle(fields.get("roleTitle"));
                 u.setTimezone(fields.getOrDefault("timezone", "Asia/Kolkata"));
                 u.setCreatedAt(fields.get("createdAt"));
                 u.setLastLoginAt(fields.get("lastLoginAt"));
-                userCache.put(u.getEmail(), u);
+                if (u.getEmail() != null) {
+                    userCache.put(u.getEmail(), u);
+                }
+                if (u.getUsername() != null) {
+                    userCache.put(u.getUsername().toLowerCase(), u);
+                }
             }
         }
     }
@@ -264,13 +363,15 @@ public class UserOperationsImpl implements UserOperations {
                 Files.createDirectories(dbPath.getParent());
             }
 
+            Set<User> distinctUsers = new HashSet<>(userCache.values());
             StringBuilder sb = new StringBuilder();
             sb.append("{\n  \"users\": [\n");
             int i = 0;
-            int total = userCache.size();
-            for (User u : userCache.values()) {
+            int total = distinctUsers.size();
+            for (User u : distinctUsers) {
                 sb.append("    {\n");
                 sb.append("      \"id\": \"").append(escape(u.getId())).append("\",\n");
+                sb.append("      \"username\": \"").append(escape(u.getUsername())).append("\",\n");
                 sb.append("      \"fullName\": \"").append(escape(u.getFullName())).append("\",\n");
                 sb.append("      \"email\": \"").append(escape(u.getEmail())).append("\",\n");
                 sb.append("      \"roleTitle\": \"").append(escape(u.getRoleTitle())).append("\",\n");

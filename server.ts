@@ -110,13 +110,14 @@ function saveDatabase(db: DatabaseSchema): void {
 }
 
 function sanitizeUser(u: StoredUser) {
+  const username = u.email && u.email.includes('@') ? u.email.split('@')[0] : u.email;
   return {
     id: u.id,
+    username,
     fullName: u.fullName,
     email: u.email,
     roleTitle: u.roleTitle,
     timezone: u.timezone,
-    passwordHash: u.passwordHash,
     createdAt: u.createdAt,
     lastLoginAt: u.lastLoginAt,
   };
@@ -147,6 +148,13 @@ function startJavaBackend(): void {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
+    javaProcess.on('error', (err) => {
+      console.warn('[server.ts] Java process notice (spawn error):', err.message);
+      console.log('[server.ts] Active: TypeScript/Express engine serving full PBKDF2-SHA256 & data/plms-db.json');
+      javaBackendReady = false;
+      javaProcess = null;
+    });
+
     javaProcess.stdout?.on('data', (data) => {
       const msg = data.toString();
       process.stdout.write(msg);
@@ -160,14 +168,15 @@ function startJavaBackend(): void {
     });
 
     javaProcess.on('exit', (code) => {
-      console.warn(`[server.ts] Java backend exited with code ${code}.`);
-      javaBackendReady = false;
-      // Restart if unexpectedly stopped
-      setTimeout(() => {
-        if (!javaBackendReady) {
-          startJavaBackend();
-        }
-      }, 2000);
+      if (javaBackendReady) {
+        console.warn(`[server.ts] Java backend exited with code ${code}.`);
+        javaBackendReady = false;
+        setTimeout(() => {
+          if (!javaBackendReady) {
+            startJavaBackend();
+          }
+        }, 5000);
+      }
     });
 
     // Check health after start
@@ -179,9 +188,9 @@ function startJavaBackend(): void {
           console.log('[server.ts] Java 17 Backend verified UP and active on port ' + JAVA_PORT);
         }
       } catch {
-        // will retry on next poll
+        // Express handlers active
       }
-    }, 500);
+    }, 1000);
   } catch (err) {
     console.warn('[server.ts] Could not spawn Java process:', err);
   }
@@ -196,9 +205,12 @@ async function startServer() {
 
   // =========================================================================
   // Java 17 Backend Reverse Proxy Middleware
-  // Forwards all /api/* requests directly to the Java HTTP server on port 8080
+  // Forwards /api/* requests directly to Java HTTP server when ready
   // =========================================================================
   app.all('/api/*', async (req, res, next) => {
+    if (!javaBackendReady) {
+      return next();
+    }
     const javaUrl = `http://127.0.0.1:${JAVA_PORT}${req.originalUrl}`;
 
     try {
